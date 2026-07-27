@@ -38,11 +38,8 @@ class ZoomService {
   async createMeeting(userId, meetingData) {
     const accessToken = await this.getAccessToken();
     try {
-      const zoomUserEmail = process.env.ZOOM_USER_EMAIL;
-      if (!zoomUserEmail) throw new Error('ZOOM_USER_EMAIL is not defined in .env');
-
       const response = await axios.post(
-        `${this.zoomApiUrl}/users/${zoomUserEmail}/meetings`,
+        `${this.zoomApiUrl}/users/me/meetings`,
         meetingData,
         {
           headers: {
@@ -79,11 +76,8 @@ class ZoomService {
   async listMeetings() {
     const accessToken = await this.getAccessToken();
     try {
-      const zoomUserEmail = process.env.ZOOM_USER_EMAIL;
-      if (!zoomUserEmail) throw new Error('ZOOM_USER_EMAIL is not defined in .env');
-
       const response = await axios.get(
-        `${this.zoomApiUrl}/users/${zoomUserEmail}/meetings`,
+        `${this.zoomApiUrl}/users/me/meetings`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
