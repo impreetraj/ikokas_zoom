@@ -9,13 +9,19 @@ const {
 
 const router = express.Router();
 
-router.route('/meetings')
-  .post(createMeeting)
-  .get(listMeetings);
 
-router.route('/meetings/:id')
-  .get(getMeetingDetails)
-  .put(updateMeeting)
-  .delete(deleteMeeting);
+router.post('/meetings', createMeeting);
+
+
+router.get('/meetings', listMeetings);
+
+
+router.get('/meetings/:id', getMeetingDetails);
+
+
+router.put('/meetings/:id', updateMeeting);
+
+
+router.delete('/meetings/:id', deleteMeeting);
 
 module.exports = router;
