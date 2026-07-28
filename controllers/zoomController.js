@@ -54,10 +54,12 @@ const getMeetingDetails = async (req, res, next) => {
 const listMeetings = async (req, res, next) => {
   try {
     const { userId } = req.query;
-    const query = {};
-    if (userId) {
-      query.user = userId;
+    
+    if (!userId) {
+      return res.status(400).json({ message: 'userId is required' });
     }
+    
+    const query = { user: userId };
     
     const meetings = await Meeting.find(query).sort({ createdAt: -1 });
     res.json(meetings);
