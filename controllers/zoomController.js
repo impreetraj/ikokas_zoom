@@ -12,6 +12,11 @@ const createMeeting = async (req, res, next) => {
       duration,
       start_time,
       timezone,
+      settings: {
+        join_before_host: true,
+        jbh_time: 0,
+        waiting_room: false
+      }
     };
 
     const zoomResponse = await zoomService.createMeeting(userId || 'default_user', meetingData);
