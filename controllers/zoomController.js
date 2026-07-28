@@ -30,6 +30,7 @@ const createMeeting = async (req, res, next) => {
       startUrl: zoomResponse.start_url,
       startTime: zoomResponse.start_time,
       duration: zoomResponse.duration,
+      password: zoomResponse.password,
     });
 
     res.status(201).json(meeting);
@@ -52,7 +53,8 @@ const getMeetingDetails = async (req, res, next) => {
 
 const listMeetings = async (req, res, next) => {
   try {
-    const meetings = await zoomService.listMeetings();
+    // Fetch from MongoDB instead of Zoom API because Zoom API's list endpoint does not return passcodes
+    const meetings = await Meeting.find().sort({ createdAt: -1 });
     res.json(meetings);
   } catch (error) {
     next(error);

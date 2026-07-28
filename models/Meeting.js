@@ -25,6 +25,9 @@ const meetingSchema = mongoose.Schema(
     },
     duration: {
       type: Number,
+    },
+    password: {
+      type: String,
     }
   },
   {
