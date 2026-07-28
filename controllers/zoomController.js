@@ -53,8 +53,13 @@ const getMeetingDetails = async (req, res, next) => {
 
 const listMeetings = async (req, res, next) => {
   try {
-    // Fetch from MongoDB instead of Zoom API because Zoom API's list endpoint does not return passcodes
-    const meetings = await Meeting.find().sort({ createdAt: -1 });
+    const { userId } = req.query;
+    const query = {};
+    if (userId) {
+      query.user = userId;
+    }
+    
+    const meetings = await Meeting.find(query).sort({ createdAt: -1 });
     res.json(meetings);
   } catch (error) {
     next(error);
