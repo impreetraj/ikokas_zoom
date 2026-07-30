@@ -1,7 +1,5 @@
 const express = require('express');
 const {
-  zoomAuth,
-  zoomCallback,
   createMeeting,
   getMeetingDetails,
   listMeetings,
@@ -11,9 +9,6 @@ const {
 
 const router = express.Router();
 
-// OAuth Routes
-router.get('/auth', zoomAuth);
-router.get('/callback', zoomCallback);
 
 router.post('/meetings', createMeeting);
 
