@@ -5,10 +5,15 @@ const {
   listMeetings,
   updateMeeting,
   deleteMeeting,
+  zoomAuth,
+  zoomCallback,
 } = require('../controllers/zoomController');
 
 const router = express.Router();
 
+
+router.get('/auth', zoomAuth);
+router.get('/callback', zoomCallback);
 
 router.post('/meetings', createMeeting);
 

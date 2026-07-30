@@ -2,9 +2,9 @@ const axios = require('axios');
 
 class ZoomService {
   constructor() {
-    this.accountId = process.env.ZOOM_ACCOUNT_ID;
     this.clientId = process.env.ZOOM_CLIENT_ID;
     this.clientSecret = process.env.ZOOM_CLIENT_SECRET;
+    this.redirectUri = process.env.ZOOM_REDIRECT_URI;
     this.zoomOauthUrl = 'https://zoom.us/oauth/token';
     this.zoomApiUrl = 'https://api.zoom.us/v2';
   }
