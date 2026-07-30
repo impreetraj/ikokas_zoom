@@ -1,25 +1,27 @@
 const axios = require('axios');
+const User = require('../models/User');
 
 class ZoomService {
   constructor() {
-    this.accountId = process.env.ZOOM_ACCOUNT_ID;
     this.clientId = process.env.ZOOM_CLIENT_ID;
     this.clientSecret = process.env.ZOOM_CLIENT_SECRET;
     this.zoomOauthUrl = 'https://zoom.us/oauth/token';
     this.zoomApiUrl = 'https://api.zoom.us/v2';
   }
 
-  async getAccessToken() {
+  async getTokensFromCode(code) {
     const token = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
-    
+    const redirectUri = process.env.ZOOM_REDIRECT_URI || 'http://localhost:5000/api/zoom/callback';
+
     try {
       const response = await axios.post(
         this.zoomOauthUrl,
         null,
         {
           params: {
-            grant_type: 'account_credentials',
-            account_id: this.accountId,
+            grant_type: 'authorization_code',
+            code: code,
+            redirect_uri: redirectUri,
           },
           headers: {
             Authorization: `Basic ${token}`,
@@ -28,21 +30,71 @@ class ZoomService {
         }
       );
       
-      return response.data.access_token;
+      return response.data;
     } catch (error) {
-      console.error('Error fetching Zoom Access Token:', error.response ? error.response.data : error.message);
-      throw new Error('Failed to obtain Zoom access token');
+      console.error('Error fetching Zoom Tokens from code:', error.response ? error.response.data : error.message);
+      throw new Error('Failed to obtain Zoom tokens from code');
     }
   }
 
-  async createMeeting(userId, meetingData) {
-    const accessToken = await this.getAccessToken();
+  async refreshUserToken(user) {
+    const token = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
+    
     try {
-      const zoomUserEmail = process.env.ZOOM_USER_EMAIL;
-      if (!zoomUserEmail) throw new Error('ZOOM_USER_EMAIL is not defined in .env');
-
       const response = await axios.post(
-        `${this.zoomApiUrl}/users/${zoomUserEmail}/meetings`,
+        this.zoomOauthUrl,
+        null,
+        {
+          params: {
+            grant_type: 'refresh_token',
+            refresh_token: user.zoomRefreshToken,
+          },
+          headers: {
+            Authorization: `Basic ${token}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }
+      );
+      
+      user.zoomAccessToken = response.data.access_token;
+      user.zoomRefreshToken = response.data.refresh_token;
+      user.zoomTokenExpiresAt = new Date(Date.now() + response.data.expires_in * 1000);
+      await user.save();
+      
+      return user.zoomAccessToken;
+    } catch (error) {
+      console.error('Error refreshing token:', error.response ? error.response.data : error.message);
+      throw new Error('Failed to refresh Zoom token. User needs to re-authenticate.');
+    }
+  }
+
+  async getValidUserToken(userId) {
+    if (!userId || userId === 'default_user') {
+       throw new Error('userId is required to interact with Zoom on behalf of a user');
+    }
+
+    const user = await User.findById(userId);
+    if (!user || !user.zoomAccessToken) {
+      throw new Error('User has not connected their Zoom account');
+    }
+    
+    // Check if token is expired (giving a 1-minute buffer)
+    const now = new Date();
+    const expiry = new Date(user.zoomTokenExpiresAt);
+    expiry.setMinutes(expiry.getMinutes() - 1);
+
+    if (now >= expiry) {
+      return await this.refreshUserToken(user);
+    }
+    
+    return user.zoomAccessToken;
+  }
+
+  async createMeeting(userId, meetingData) {
+    const accessToken = await this.getValidUserToken(userId);
+    try {
+      const response = await axios.post(
+        `${this.zoomApiUrl}/users/me/meetings`,
         meetingData,
         {
           headers: {
@@ -58,8 +110,8 @@ class ZoomService {
     }
   }
 
-  async getMeeting(meetingId) {
-    const accessToken = await this.getAccessToken();
+  async getMeeting(userId, meetingId) {
+    const accessToken = await this.getValidUserToken(userId);
     try {
       const response = await axios.get(
         `${this.zoomApiUrl}/meetings/${meetingId}`,
@@ -76,14 +128,11 @@ class ZoomService {
     }
   }
 
-  async listMeetings() {
-    const accessToken = await this.getAccessToken();
+  async listMeetings(userId) {
+    const accessToken = await this.getValidUserToken(userId);
     try {
-      const zoomUserEmail = process.env.ZOOM_USER_EMAIL;
-      if (!zoomUserEmail) throw new Error('ZOOM_USER_EMAIL is not defined in .env');
-
       const response = await axios.get(
-        `${this.zoomApiUrl}/users/${zoomUserEmail}/meetings`,
+        `${this.zoomApiUrl}/users/me/meetings`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -97,8 +146,8 @@ class ZoomService {
     }
   }
 
-  async updateMeeting(meetingId, updateData) {
-    const accessToken = await this.getAccessToken();
+  async updateMeeting(userId, meetingId, updateData) {
+    const accessToken = await this.getValidUserToken(userId);
     try {
       await axios.patch(
         `${this.zoomApiUrl}/meetings/${meetingId}`,
@@ -117,8 +166,8 @@ class ZoomService {
     }
   }
 
-  async deleteMeeting(meetingId) {
-    const accessToken = await this.getAccessToken();
+  async deleteMeeting(userId, meetingId) {
+    const accessToken = await this.getValidUserToken(userId);
     try {
       await axios.delete(
         `${this.zoomApiUrl}/meetings/${meetingId}`,
@@ -128,7 +177,7 @@ class ZoomService {
           },
         }
       );
-      return true; //
+      return true;
     } catch (error) {
       console.error('Error deleting Zoom meeting:', error.response ? error.response.data : error.message);
       throw new Error('Failed to delete Zoom meeting');

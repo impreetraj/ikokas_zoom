@@ -16,6 +16,18 @@ const userSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+    zoomAccessToken: {
+      type: String,
+      default: null,
+    },
+    zoomRefreshToken: {
+      type: String,
+      default: null,
+    },
+    zoomTokenExpiresAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
